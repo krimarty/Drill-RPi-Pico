@@ -6,6 +6,7 @@
 #include <rclc/executor.h>
 #include <std_msgs/msg/u_int8.h>
 #include <std_msgs/msg/int16.h>
+#include <std_msgs/msg/int64_multi_array.h>
 #include <rmw_microros/rmw_microros.h>
 
 #include "pico/stdlib.h"
@@ -22,8 +23,12 @@
 struct storage storage;
 struct linear linear;
 struct motor motor;
+int counter;
 
 const uint LED_PIN = 25;
+
+rcl_subscription_t array_subscriber;
+std_msgs__msg__Int64MultiArray* msg;
 
 rcl_publisher_t publisher;
 std_msgs__msg__Int16 weight;
@@ -49,7 +54,7 @@ void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
     //if (motor_read(&motor) < 0)
     if (linear_read(&linear) < 0)
     {
-        weight.data =100;
+        weight.data = counter;
         rcl_ret_t ret = rcl_publish(&publisher, &weight, NULL);
     }
     else
@@ -60,6 +65,13 @@ void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
     //weight.data = motor.direction;
     rcl_ret_t ret = rcl_publish(&publisher, &weight, NULL);
     }
+    
+}
+
+void array_callback(const void* msgin)
+{
+    const std_msgs__msg__Int64MultiArray * msg = (const std_msgs__msg__Int64MultiArray *)msgin;
+    counter++;
     
 }
 
@@ -138,6 +150,22 @@ int main()
         return ret;
     }
 
+    //Allocation for ros array
+    msg->data.capacity = 100; 
+    msg->data.size = 0;
+    msg->data.data = (int64_t*) malloc(msg->data.capacity * sizeof(int64_t));
+
+    msg->layout.dim.capacity = 100;
+    msg->layout.dim.size = 0;
+    msg->layout.dim.data = (std_msgs__msg__MultiArrayDimension*) malloc(msg->layout.dim.capacity * sizeof(std_msgs__msg__MultiArrayDimension));
+
+    for(size_t i = 0; i < msg->layout.dim.capacity; i++){
+        msg->layout.dim.data[i].label.capacity = 20;
+        msg->layout.dim.data[i].label.size = 0;
+        msg->layout.dim.data[i].label.data = (char*) malloc(msg->layout.dim.data[i].label.capacity * sizeof(char));
+    }
+    //
+
     rclc_support_init(&support, 0, NULL, &allocator);
 
     rclc_node_init_default(&node, "pico_node", "", &support);
@@ -146,6 +174,11 @@ int main()
         &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16),
         "sample_weight");
+
+    rclc_subscription_init_default(
+        &array_subscriber, &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int64MultiArray),
+        "array");
 
     //init subscriber
     rcl_ret_t rc = rclc_subscription_init_default(
@@ -179,9 +212,13 @@ int main()
         RCL_MS_TO_NS(1000),
         timer_callback);
 
-    rclc_executor_init(&executor, &support.context, 6, &allocator); //the number of executors
+    rclc_executor_init(&executor, &support.context, 7, &allocator); //the number of executors
     rclc_executor_add_timer(&executor, &timer);
     //init executor for subscriber
+    rclc_executor_add_subscription(
+        &executor, &array_subscriber, &msg,
+        &array_callback, ON_NEW_DATA);
+
     rc = rclc_executor_add_subscription(
         &executor, &subscriber_linear_state, &linear_sta,
         &linear_state_callback, ON_NEW_DATA);
