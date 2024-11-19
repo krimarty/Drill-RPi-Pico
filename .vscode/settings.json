@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "joy.h": "c",
+        "joy__struct.h": "c"
+    }
+}

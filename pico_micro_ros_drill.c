@@ -7,6 +7,7 @@
 #include <std_msgs/msg/u_int8.h>
 #include <std_msgs/msg/int16.h>
 #include <std_msgs/msg/int64_multi_array.h>
+#include <sensor_msgs/msg/joy.h>
 #include <rmw_microros/rmw_microros.h>
 
 #include "pico/stdlib.h"
@@ -29,6 +30,9 @@ const uint LED_PIN = 25;
 
 rcl_subscription_t array_subscriber;
 std_msgs__msg__Int64MultiArray* msg;
+
+rcl_subscription_t array_subscriber;
+sensor_msgs__msg__Joy* msg_joy;
 
 rcl_publisher_t publisher;
 std_msgs__msg__Int16 weight;
@@ -61,7 +65,7 @@ void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
     {
     //weight.data = storage.raw;
     //weight.data = storage.command;
-    weight.data = storage.weight;
+    weight.data = counter;
     //weight.data = motor.direction;
     rcl_ret_t ret = rcl_publish(&publisher, &weight, NULL);
     }
@@ -164,6 +168,27 @@ int main()
         msg->layout.dim.data[i].label.size = 0;
         msg->layout.dim.data[i].label.data = (char*) malloc(msg->layout.dim.data[i].label.capacity * sizeof(char));
     }
+    //
+
+    //Allocation for ros joy
+    msg_joy->axes.capacity=100;
+    msg_joy->axes.size = 0;
+    msg_joy->axes.data = (float*) malloc(msg_joy->axes.capacity * sizeof(float));
+
+    msg_joy->buttons.capacity=100;
+    msg_joy->buttons.size = 0;
+    msg_joy->buttons.data = (int32_t*) malloc(msg_joy->buttons.capacity * sizeof(int32_t));
+
+    msg_joy->header.frame_id.capacity = 100;
+    msg_joy->header.frame_id.data = (char*) malloc(msg_joy->header.frame_id.capacity * sizeof(char));
+    msg_joy->header.frame_id.size = 0;
+
+    // Assigning value to the frame_id char sequence
+    strcpy(msg_joy->header.frame_id.data, "Hello World");
+    msg_joy->header.frame_id.size = strlen(msg_joy->header.frame_id.data);
+
+    msg_joy->header.stamp.sec = 10;
+    msg_joy->header.stamp.nanosec = 20;
     //
 
     rclc_support_init(&support, 0, NULL, &allocator);
