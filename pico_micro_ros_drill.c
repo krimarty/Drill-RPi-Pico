@@ -29,7 +29,7 @@ int counter;
 const uint LED_PIN = 25;
 
 rcl_subscription_t array_subscriber;
-std_msgs__msg__Int64MultiArray* msg;
+std_msgs__msg__Int64MultiArray msg;
 
 rcl_subscription_t array_subscriber;
 sensor_msgs__msg__Joy* msg_joy;
@@ -38,7 +38,7 @@ rcl_publisher_t publisher;
 std_msgs__msg__Int16 weight;
 rcl_subscription_t subscriber_linear_state;
 std_msgs__msg__UInt8 linear_sta;
-
+/*
 rcl_subscription_t subscriber_linear_speed;
 std_msgs__msg__UInt8 linear_spe;
 
@@ -50,7 +50,7 @@ std_msgs__msg__UInt8 motor_spe;
 
 rcl_subscription_t subscriber_storage_command;
 std_msgs__msg__UInt8 storage_com;
-
+*/
 
 void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
 {
@@ -72,13 +72,12 @@ void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
     
 }
 
-void array_callback(const void* msgin)
+void array_callback(std_msgs__msg__Int64MultiArray* msgin)
 {
-    const std_msgs__msg__Int64MultiArray * msg = (const std_msgs__msg__Int64MultiArray *)msgin;
     counter++;
     
 }
-
+/*
 void linear_state_callback(const void* msgin)
 {
     const std_msgs__msg__UInt8 * msg = (const std_msgs__msg__UInt8 *)msgin;
@@ -119,10 +118,11 @@ void storage_command_callback(const void* msgin)
     storage.command = msg->data;
     if (old_command != storage.command && storage.command > 9) {storage_write(&storage);}
 }
-
+*/
 
 int main()
 {
+    printf("starting");
     rmw_uros_set_custom_transport(
 		true,
 		NULL,
@@ -132,6 +132,7 @@ int main()
 		pico_serial_transport_read
 	);
 
+    stdio_init_all();
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
     rcl_timer_t timer;
@@ -154,43 +155,6 @@ int main()
         return ret;
     }
 
-    //Allocation for ros array
-    msg->data.capacity = 100; 
-    msg->data.size = 0;
-    msg->data.data = (int64_t*) malloc(msg->data.capacity * sizeof(int64_t));
-
-    msg->layout.dim.capacity = 100;
-    msg->layout.dim.size = 0;
-    msg->layout.dim.data = (std_msgs__msg__MultiArrayDimension*) malloc(msg->layout.dim.capacity * sizeof(std_msgs__msg__MultiArrayDimension));
-
-    for(size_t i = 0; i < msg->layout.dim.capacity; i++){
-        msg->layout.dim.data[i].label.capacity = 20;
-        msg->layout.dim.data[i].label.size = 0;
-        msg->layout.dim.data[i].label.data = (char*) malloc(msg->layout.dim.data[i].label.capacity * sizeof(char));
-    }
-    //
-
-    //Allocation for ros joy
-    msg_joy->axes.capacity=100;
-    msg_joy->axes.size = 0;
-    msg_joy->axes.data = (float*) malloc(msg_joy->axes.capacity * sizeof(float));
-
-    msg_joy->buttons.capacity=100;
-    msg_joy->buttons.size = 0;
-    msg_joy->buttons.data = (int32_t*) malloc(msg_joy->buttons.capacity * sizeof(int32_t));
-
-    msg_joy->header.frame_id.capacity = 100;
-    msg_joy->header.frame_id.data = (char*) malloc(msg_joy->header.frame_id.capacity * sizeof(char));
-    msg_joy->header.frame_id.size = 0;
-
-    // Assigning value to the frame_id char sequence
-    strcpy(msg_joy->header.frame_id.data, "Hello World");
-    msg_joy->header.frame_id.size = strlen(msg_joy->header.frame_id.data);
-
-    msg_joy->header.stamp.sec = 10;
-    msg_joy->header.stamp.nanosec = 20;
-    //
-
     rclc_support_init(&support, 0, NULL, &allocator);
 
     rclc_node_init_default(&node, "pico_node", "", &support);
@@ -205,6 +169,22 @@ int main()
         ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int64MultiArray),
         "array");
 
+        //Allocation for ros array
+    msg.data.capacity = 100; 
+    msg.data.size = 0;
+    msg.data.data = (int64_t*) malloc(msg.data.capacity * sizeof(int64_t));
+
+    msg.layout.dim.capacity = 100;
+    msg.layout.dim.size = 0;
+    msg.layout.dim.data = (std_msgs__msg__MultiArrayDimension*) malloc(msg.layout.dim.capacity * sizeof(std_msgs__msg__MultiArrayDimension));
+
+    for(size_t i = 0; i < msg.layout.dim.capacity; i++){
+        msg.layout.dim.data[i].label.capacity = 20;
+        msg.layout.dim.data[i].label.size = 0;
+        msg.layout.dim.data[i].label.data = (char*) malloc(msg.layout.dim.data[i].label.capacity * sizeof(char));
+    }
+    //
+/*
     //init subscriber
     rcl_ret_t rc = rclc_subscription_init_default(
         &subscriber_linear_state, &node,
@@ -230,6 +210,7 @@ int main()
         &subscriber_storage_command, &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt8),
         "storage_command");
+        */
 
     rclc_timer_init_default(
         &timer,
@@ -237,13 +218,13 @@ int main()
         RCL_MS_TO_NS(1000),
         timer_callback);
 
-    rclc_executor_init(&executor, &support.context, 7, &allocator); //the number of executors
+    rclc_executor_init(&executor, &support.context, 5, &allocator); //the number of executors
     rclc_executor_add_timer(&executor, &timer);
     //init executor for subscriber
     rclc_executor_add_subscription(
         &executor, &array_subscriber, &msg,
         &array_callback, ON_NEW_DATA);
-
+/*
     rc = rclc_executor_add_subscription(
         &executor, &subscriber_linear_state, &linear_sta,
         &linear_state_callback, ON_NEW_DATA);
@@ -263,7 +244,7 @@ int main()
     rc4 = rclc_executor_add_subscription(
         &executor, &subscriber_storage_command, &storage_com,
         &storage_command_callback, ON_NEW_DATA);
-
+*/
 
     //init i2c
     i2c_init(I2C_PORT, 400000);
@@ -286,6 +267,8 @@ int main()
         sleep_ms(10);
         linear_write(&linear);
         rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
+        printf("Hello World from Pico\n");
+
     }
     return 0;
 }
