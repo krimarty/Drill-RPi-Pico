@@ -6,7 +6,6 @@
 #include <rclc/executor.h>
 #include <std_msgs/msg/u_int8.h>
 #include <std_msgs/msg/int16.h>
-#include <std_msgs/msg/int64_multi_array.h>
 #include <sensor_msgs/msg/joy.h>
 #include <rmw_microros/rmw_microros.h>
 
@@ -24,33 +23,14 @@
 struct storage storage;
 struct linear linear;
 struct motor motor;
-int counter;
 
 const uint LED_PIN = 25;
-
-//rcl_subscription_t array_subscriber;
-//std_msgs__msg__Int64MultiArray msg;
 
 rcl_subscription_t joy_subscriber;
 sensor_msgs__msg__Joy msg_joy;
 
 rcl_publisher_t publisher;
 std_msgs__msg__Int16 weight;
-rcl_subscription_t subscriber_linear_state;
-std_msgs__msg__UInt8 linear_sta;
-/*
-rcl_subscription_t subscriber_linear_speed;
-std_msgs__msg__UInt8 linear_spe;
-
-rcl_subscription_t subscriber_motor_state;
-std_msgs__msg__UInt8 motor_sta;
-
-rcl_subscription_t subscriber_motor_speed;
-std_msgs__msg__UInt8 motor_spe;
-
-rcl_subscription_t subscriber_storage_command;
-std_msgs__msg__UInt8 storage_com;
-*/
 
 void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
 {
@@ -58,73 +38,57 @@ void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
     //if (motor_read(&motor) < 0)
     if (linear_read(&linear) < 0)
     {
-        weight.data = counter;
+        weight.data = motor.state;
         rcl_ret_t ret = rcl_publish(&publisher, &weight, NULL);
     }
     else
     {
     //weight.data = storage.raw;
     //weight.data = storage.command;
-    weight.data = counter;
+    weight.data = motor.state;
     //weight.data = motor.direction;
     rcl_ret_t ret = rcl_publish(&publisher, &weight, NULL);
     }
     
 }
 
-/*
-void array_callback(std_msgs__msg__Int64MultiArray* msgin)
-{
-    counter++;
-}
-*/
-
 void joy_callback(sensor_msgs__msg__Joy* msgin)
 {
-    counter++;
-}
-/*
-void linear_state_callback(const void* msgin)
-{
-    const std_msgs__msg__UInt8 * msg = (const std_msgs__msg__UInt8 *)msgin;
-    linear.command = msg->data;
+    // Set linear state
+    if (msgin->axes.data[1] == 0.0) { linear.command = 4; }      // stop linear
+    else if (msgin->axes.data[1] > 0.0) { linear.command = 1; }  // up linear
+    else { linear.command = 2; }                                 // down linear
+
+    // Set the linear speed
+    linear.speed = (uint8_t)(fabs(msgin->axes.data[1]) * 100.0f); //calculating speed
+
     linear_read(&linear);
-    if (linear.states == 1 && msg->data == 1) //kdyz bude uplne nahore a zaroven se macka jed nahoru
-    {
-        linear.command = 4; //wait untill 
+    if(linear.states == 1 && linear.command == 1) { linear.command = 4; } //kontrola koncaku
+    linear_write(&linear);
+
+    // Set the motor
+    if (msgin->axes.data[5] < 1)    //left 
+    { 
+        motor.state = 0;
+        motor.torque =  (1 - msgin->axes.data[5]) / 2 * 255;
     }
-    //storage_write(&storage);
-}
+    else    //right
+    { 
+        motor.state = 1;
+        motor.torque =  (1 - msgin->axes.data[2]) / 2 * 255; 
+    }
+    motor_write(&motor);
 
-void linear_speed_callback(const void* msgin)
-{
-    const std_msgs__msg__UInt8 * msg = (const std_msgs__msg__UInt8 *)msgin;
-    linear.speed = msg->data;
-    //storage_write(&storage);
-}
-
-void motor_state_callback(const void* msgin)
-{
-    const std_msgs__msg__UInt8 * msg = (const std_msgs__msg__UInt8 *)msgin;
-    motor.direction = msg->data;
-    //storage_write(&storage);
-}
-
-void motor_speed_callback(const void* msgin)
-{
-    const std_msgs__msg__UInt8 * msg = (const std_msgs__msg__UInt8 *)msgin;
-    motor.torque = msg->data;
-    //storage_write(&storage);
-}
-
-void storage_command_callback(const void* msgin)
-{
-    const std_msgs__msg__UInt8 * msg = (const std_msgs__msg__UInt8 *)msgin;
+    // Set the storage command
     uint8_t old_command = storage.command;
-    storage.command = msg->data;
-    if (old_command != storage.command && storage.command > 9) {storage_write(&storage);}
+    if (msgin->buttons.data[0] == 1) { storage.command = 31; }          //pos 1
+    else if (msgin->buttons.data[1] == 1) {storage.command = 32;}       //pos 2
+    else if (msgin->buttons.data[2] == 1) {storage.command = 33;}       //pos 3
+    else if (msgin->buttons.data[3] == 1) {storage.command = 30;}       //pos 0
+    else if (msgin->buttons.data[4] == 1) {storage.command = 20;}       //get weight
+    else if (msgin->buttons.data[5] == 1) {storage.command = 40;}       //hold pos
+    if(old_command != storage.command) { storage_write(&storage); }     
 }
-*/
 
 int main()
 {
@@ -170,36 +134,12 @@ int main()
         ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16),
         "sample_weight");
 
-    /*
-    rclc_subscription_init_default(
-        &array_subscriber, &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int64MultiArray),
-        "array");
-    */
-
    rclc_subscription_init_default(
         &joy_subscriber, &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Joy),
         "joy");
 
-    /*
-    //Allocation for ros array
-    msg.data.capacity = 100; 
-    msg.data.size = 0;
-    msg.data.data = (int64_t*) malloc(msg.data.capacity * sizeof(int64_t));
-
-    msg.layout.dim.capacity = 100;
-    msg.layout.dim.size = 0;
-    msg.layout.dim.data = (std_msgs__msg__MultiArrayDimension*) malloc(msg.layout.dim.capacity * sizeof(std_msgs__msg__MultiArrayDimension));
-
-    for(size_t i = 0; i < msg.layout.dim.capacity; i++){
-        msg.layout.dim.data[i].label.capacity = 20;
-        msg.layout.dim.data[i].label.size = 0;
-        msg.layout.dim.data[i].label.data = (char*) malloc(msg.layout.dim.data[i].label.capacity * sizeof(char));
-    }
-    */
-
-     //Allocation for ros joy
+     //Allocation for joy message
     msg_joy.axes.capacity=100;
     msg_joy.axes.size = 0;
     msg_joy.axes.data = (float*) malloc(msg_joy.axes.capacity * sizeof(float));
@@ -218,33 +158,6 @@ int main()
 
     msg_joy.header.stamp.sec = 10;
     msg_joy.header.stamp.nanosec = 20;
-/*
-    //init subscriber
-    rcl_ret_t rc = rclc_subscription_init_default(
-        &subscriber_linear_state, &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt8),
-        "linear_state");
-
-    rcl_ret_t rc1 = rclc_subscription_init_default(
-        &subscriber_linear_speed, &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt8),
-        "linear_speed");
-
-    rcl_ret_t rc2 = rclc_subscription_init_default(
-        &subscriber_motor_state, &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt8),
-        "motor_state");
-
-    rcl_ret_t rc3 = rclc_subscription_init_default(
-        &subscriber_motor_speed, &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt8),
-        "motor_speed");
-
-    rcl_ret_t rc4 = rclc_subscription_init_default(
-        &subscriber_storage_command, &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt8),
-        "storage_command");
-        */
 
     rclc_timer_init_default(
         &timer,
@@ -255,48 +168,17 @@ int main()
     rclc_executor_init(&executor, &support.context, 5, &allocator); //the number of executors
     rclc_executor_add_timer(&executor, &timer);
     //init executor for subscriber
-
-    /*
-    //init executor for array sub
-    rclc_executor_add_subscription(
-        &executor, &array_subscriber, &msg,
-        &array_callback, ON_NEW_DATA);
-    */
-
     //init executor for joy sub
     rclc_executor_add_subscription(
         &executor, &joy_subscriber, &msg_joy,
         &joy_callback, ON_NEW_DATA);
 
-/*
-    rc = rclc_executor_add_subscription(
-        &executor, &subscriber_linear_state, &linear_sta,
-        &linear_state_callback, ON_NEW_DATA);
-
-    rc1 = rclc_executor_add_subscription(
-        &executor, &subscriber_linear_speed, &linear_spe,
-        &linear_speed_callback, ON_NEW_DATA);
-
-    rc2 = rclc_executor_add_subscription(
-        &executor, &subscriber_motor_state, &motor_sta,
-        &motor_state_callback, ON_NEW_DATA);
-
-    rc3 = rclc_executor_add_subscription(
-        &executor, &subscriber_motor_speed, &motor_spe,
-        &motor_speed_callback, ON_NEW_DATA);
-
-    rc4 = rclc_executor_add_subscription(
-        &executor, &subscriber_storage_command, &storage_com,
-        &storage_command_callback, ON_NEW_DATA);
-*/
-
     //init i2c
-    i2c_init(I2C_PORT, 400000);
+    i2c_init(I2C_PORT, 100000);
     gpio_set_function(4, GPIO_FUNC_I2C);
     gpio_set_function(5, GPIO_FUNC_I2C);
     gpio_pull_up(4);
     gpio_pull_up(5);
-
 
     gpio_put(LED_PIN, 1);
 
@@ -306,13 +188,7 @@ int main()
 
     while (true)
     {
-        sleep_ms(10);
-        motor_write(&motor);
-        sleep_ms(10);
-        linear_write(&linear);
         rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
-        printf("Hello World from Pico\n");
-
     }
     return 0;
 }
