@@ -31,7 +31,7 @@ const uint LED_PIN = 25;
 //rcl_subscription_t array_subscriber;
 //std_msgs__msg__Int64MultiArray msg;
 
-rcl_subscription_t array_subscriber;
+rcl_subscription_t joy_subscriber;
 sensor_msgs__msg__Joy msg_joy;
 
 rcl_publisher_t publisher;
@@ -170,11 +170,17 @@ int main()
         ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16),
         "sample_weight");
 
-    
+    /*
     rclc_subscription_init_default(
         &array_subscriber, &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int64MultiArray),
         "array");
+    */
+
+   rclc_subscription_init_default(
+        &joy_subscriber, &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Joy),
+        "joy");
 
     /*
     //Allocation for ros array
@@ -259,7 +265,7 @@ int main()
 
     //init executor for joy sub
     rclc_executor_add_subscription(
-        &executor, &array_subscriber, &msg_joy,
+        &executor, &joy_subscriber, &msg_joy,
         &joy_callback, ON_NEW_DATA);
 
 /*
