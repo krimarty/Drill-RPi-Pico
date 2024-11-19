@@ -28,11 +28,11 @@ int counter;
 
 const uint LED_PIN = 25;
 
-rcl_subscription_t array_subscriber;
-std_msgs__msg__Int64MultiArray msg;
+//rcl_subscription_t array_subscriber;
+//std_msgs__msg__Int64MultiArray msg;
 
 rcl_subscription_t array_subscriber;
-sensor_msgs__msg__Joy* msg_joy;
+sensor_msgs__msg__Joy msg_joy;
 
 rcl_publisher_t publisher;
 std_msgs__msg__Int16 weight;
@@ -72,10 +72,16 @@ void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
     
 }
 
+/*
 void array_callback(std_msgs__msg__Int64MultiArray* msgin)
 {
     counter++;
-    
+}
+*/
+
+void joy_callback(sensor_msgs__msg__Joy* msgin)
+{
+    counter++;
 }
 /*
 void linear_state_callback(const void* msgin)
@@ -164,12 +170,14 @@ int main()
         ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16),
         "sample_weight");
 
+    
     rclc_subscription_init_default(
         &array_subscriber, &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int64MultiArray),
         "array");
 
-        //Allocation for ros array
+    /*
+    //Allocation for ros array
     msg.data.capacity = 100; 
     msg.data.size = 0;
     msg.data.data = (int64_t*) malloc(msg.data.capacity * sizeof(int64_t));
@@ -183,7 +191,27 @@ int main()
         msg.layout.dim.data[i].label.size = 0;
         msg.layout.dim.data[i].label.data = (char*) malloc(msg.layout.dim.data[i].label.capacity * sizeof(char));
     }
-    //
+    */
+
+     //Allocation for ros joy
+    msg_joy.axes.capacity=100;
+    msg_joy.axes.size = 0;
+    msg_joy.axes.data = (float*) malloc(msg_joy.axes.capacity * sizeof(float));
+
+    msg_joy.buttons.capacity=100;
+    msg_joy.buttons.size = 0;
+    msg_joy.buttons.data = (int32_t*) malloc(msg_joy.buttons.capacity * sizeof(int32_t));
+
+    msg_joy.header.frame_id.capacity = 100;
+    msg_joy.header.frame_id.data = (char*) malloc(msg_joy.header.frame_id.capacity * sizeof(char));
+    msg_joy.header.frame_id.size = 0;
+
+    // Assigning value to the frame_id char sequence
+    strcpy(msg_joy.header.frame_id.data, "Hello World");
+    msg_joy.header.frame_id.size = strlen(msg_joy.header.frame_id.data);
+
+    msg_joy.header.stamp.sec = 10;
+    msg_joy.header.stamp.nanosec = 20;
 /*
     //init subscriber
     rcl_ret_t rc = rclc_subscription_init_default(
@@ -221,9 +249,19 @@ int main()
     rclc_executor_init(&executor, &support.context, 5, &allocator); //the number of executors
     rclc_executor_add_timer(&executor, &timer);
     //init executor for subscriber
+
+    /*
+    //init executor for array sub
     rclc_executor_add_subscription(
         &executor, &array_subscriber, &msg,
         &array_callback, ON_NEW_DATA);
+    */
+
+    //init executor for joy sub
+    rclc_executor_add_subscription(
+        &executor, &array_subscriber, &msg_joy,
+        &joy_callback, ON_NEW_DATA);
+
 /*
     rc = rclc_executor_add_subscription(
         &executor, &subscriber_linear_state, &linear_sta,
