@@ -18,7 +18,7 @@
 #include "motor_driver.h"
 #include "math.h"
 
-#define I2C_PORT i2c0
+#define I2C_PORT i2c1
 
 struct storage storage;
 struct linear linear;
@@ -34,18 +34,19 @@ std_msgs__msg__Int16 weight;
 
 void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
 {
-    //if (storage_read(&storage) < 0)
+    if (storage_read(&storage) < 0)
     //if (motor_read(&motor) < 0)
-    if (linear_read(&linear) < 0)
+    //if (linear_read(&linear) < 0)
     {
-        weight.data = motor.state;
+        weight.data = 68;
         rcl_ret_t ret = rcl_publish(&publisher, &weight, NULL);
     }
     else
     {
     //weight.data = storage.raw;
+    weight.data = storage.weight;
     //weight.data = storage.command;
-    weight.data = motor.state;
+    //weight.data = motor.torque;
     //weight.data = motor.direction;
     rcl_ret_t ret = rcl_publish(&publisher, &weight, NULL);
     }
@@ -54,6 +55,7 @@ void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
 
 void joy_callback(sensor_msgs__msg__Joy* msgin)
 {
+	
     // Set linear state
     if (msgin->axes.data[1] == 0.0) { linear.command = 4; }      // stop linear
     else if (msgin->axes.data[1] > 0.0) { linear.command = 1; }  // up linear
@@ -70,12 +72,12 @@ void joy_callback(sensor_msgs__msg__Joy* msgin)
     if (msgin->axes.data[5] < 1)    //left 
     { 
         motor.state = 0;
-        motor.torque =  (1 - msgin->axes.data[5]) / 2 * 255;
+        motor.torque =  (1 - msgin->axes.data[5]) / 2 * 200;
     }
     else    //right
     { 
         motor.state = 1;
-        motor.torque =  (1 - msgin->axes.data[2]) / 2 * 255; 
+        motor.torque =  (1 - msgin->axes.data[2]) / 2 * 200; 
     }
     motor_write(&motor);
 
@@ -87,7 +89,8 @@ void joy_callback(sensor_msgs__msg__Joy* msgin)
     else if (msgin->buttons.data[3] == 1) {storage.command = 30;}       //pos 0
     else if (msgin->buttons.data[4] == 1) {storage.command = 20;}       //get weight
     else if (msgin->buttons.data[5] == 1) {storage.command = 40;}       //hold pos
-    if(old_command != storage.command) { storage_write(&storage); }     
+    if(old_command != storage.command) { storage_write(&storage); }  
+       
 }
 
 int main()
@@ -140,11 +143,11 @@ int main()
         "joy");
 
      //Allocation for joy message
-    msg_joy.axes.capacity=100;
+    msg_joy.axes.capacity=10;
     msg_joy.axes.size = 0;
     msg_joy.axes.data = (float*) malloc(msg_joy.axes.capacity * sizeof(float));
 
-    msg_joy.buttons.capacity=100;
+    msg_joy.buttons.capacity=10;
     msg_joy.buttons.size = 0;
     msg_joy.buttons.data = (int32_t*) malloc(msg_joy.buttons.capacity * sizeof(int32_t));
 
@@ -165,7 +168,7 @@ int main()
         RCL_MS_TO_NS(1000),
         timer_callback);
 
-    rclc_executor_init(&executor, &support.context, 5, &allocator); //the number of executors
+    rclc_executor_init(&executor, &support.context, 2, &allocator); //the number of executors
     rclc_executor_add_timer(&executor, &timer);
     //init executor for subscriber
     //init executor for joy sub
@@ -175,10 +178,10 @@ int main()
 
     //init i2c
     i2c_init(I2C_PORT, 100000);
-    gpio_set_function(4, GPIO_FUNC_I2C);
-    gpio_set_function(5, GPIO_FUNC_I2C);
-    gpio_pull_up(4);
-    gpio_pull_up(5);
+    gpio_set_function(2, GPIO_FUNC_I2C);
+    gpio_set_function(3, GPIO_FUNC_I2C);
+    gpio_pull_up(2);
+    gpio_pull_up(3);
 
     gpio_put(LED_PIN, 1);
 

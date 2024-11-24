@@ -5,7 +5,7 @@
 #include "hardware/i2c.h"
 #include "motor_driver.h"
 
-#define I2C_PORT i2c0
+#define I2C_PORT i2c1
 #define MOTOR_ADDR 0x0A
 
 int motor_read(struct motor* motor)
