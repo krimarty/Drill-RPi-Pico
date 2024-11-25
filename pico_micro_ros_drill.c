@@ -71,12 +71,12 @@ void joy_callback(sensor_msgs__msg__Joy* msgin)
     // Set the motor
     if (msgin->axes.data[5] < 1)    //left 
     { 
-        motor.state = 0;
+        motor.direction = 0;
         motor.torque =  (1 - msgin->axes.data[5]) / 2 * 200;
     }
     else    //right
     { 
-        motor.state = 1;
+        motor.direction = 1;
         motor.torque =  (1 - msgin->axes.data[2]) / 2 * 200; 
     }
     motor_write(&motor);
