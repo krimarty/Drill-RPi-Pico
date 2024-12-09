@@ -4,7 +4,7 @@
 #include "hardware/gpio.h"
 #include "hardware/i2c.h"
 
-#define I2C_PORT i2c1
+#define I2C_PORT i2c0
 #define STORAGE_ADDR 0x08
 
 struct storage{

@@ -8,7 +8,7 @@
 
 struct motor {
 	float torque;
-	uint8_t direction;
+	//uint8_t direction;
 	float torque_meas;
 	uint8_t state;
 	};

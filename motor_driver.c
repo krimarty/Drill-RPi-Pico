@@ -5,7 +5,7 @@
 #include "hardware/i2c.h"
 #include "motor_driver.h"
 
-#define I2C_PORT i2c1
+#define I2C_PORT i2c0
 #define MOTOR_ADDR 0x0A
 
 int motor_read(struct motor* motor)
@@ -24,11 +24,11 @@ int motor_read(struct motor* motor)
 
 int motor_write(struct motor* motor)
 {
-    uint8_t buffer[5];
-    buffer[0] = motor->direction;
-	*(float*)(buffer + 1) = motor->torque;
+    uint8_t buffer[4];
+    //buffer[0] = motor->direction;
+	*(float*)(buffer) = motor->torque;
 
-    if (i2c_write_blocking(I2C_PORT, MOTOR_ADDR, buffer, 5, false) != 5);
+    if (i2c_write_blocking(I2C_PORT, MOTOR_ADDR, buffer, 4, false) != 4);
     {
         return -1;
     }
@@ -38,7 +38,6 @@ int motor_write(struct motor* motor)
 void motor_init(struct motor* motor)
 {
     motor->torque = 0;
-	motor->direction = 0;
 	motor->torque_meas = 0;
 	motor->state = 0;
 }

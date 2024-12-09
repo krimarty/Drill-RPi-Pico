@@ -5,7 +5,7 @@
 #include "hardware/i2c.h"
 #include "linear_driver.h"
 
-#define I2C_PORT i2c1
+#define I2C_PORT i2c0
 #define LINEAR_ADDR 0x09
 
 int linear_read(struct linear* linear)
