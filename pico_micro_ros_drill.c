@@ -24,8 +24,6 @@ struct storage storage;
 struct linear linear;
 struct motor motor;
 
-int counter = 0;
-
 const uint LED_PIN = 25;
 
 rcl_subscription_t joy_subscriber;
@@ -46,10 +44,10 @@ void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
     else
     {
     //weight.data = storage.raw;
-    //weight.data = storage.weight;
+    weight.data = storage.weight;
+    //weight.data = linear.states;
     //weight.data = storage.command;
     //weight.data = motor.torque;
-    weight.data = counter;
     //weight.data = motor.direction;
     rcl_ret_t ret = rcl_publish(&publisher, &weight, NULL);
     }
@@ -58,7 +56,6 @@ void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
 
 void joy_callback(sensor_msgs__msg__Joy* msgin)
 {
-	counter++;
     // Set linear state
     if (msgin->axes.data[1] == 0.0) { linear.command = 4; }      // stop linear
     else if (msgin->axes.data[1] > 0.0) { linear.command = 1; }  // up linear
@@ -74,11 +71,11 @@ void joy_callback(sensor_msgs__msg__Joy* msgin)
     // Set the motor
     if (msgin->axes.data[5] < 1)    //left 
     { 
-        motor.torque = - ((1 - msgin->axes.data[5]) / 2 * 200);
+        motor.torque =  (1 - msgin->axes.data[5]) / 2 * 200; 
     }
     else    //right
     { 
-        motor.torque =  (1 - msgin->axes.data[2]) / 2 * 200; 
+        motor.torque = - ((1 - msgin->axes.data[2]) / 2 * 200);
     }
     motor_write(&motor);
 
@@ -144,11 +141,11 @@ int main()
         "joy");
 
      //Allocation for joy message
-    msg_joy.axes.capacity=10;
+    msg_joy.axes.capacity=100;
     msg_joy.axes.size = 0;
     msg_joy.axes.data = (float*) malloc(msg_joy.axes.capacity * sizeof(float));
 
-    msg_joy.buttons.capacity=10;
+    msg_joy.buttons.capacity=100;
     msg_joy.buttons.size = 0;
     msg_joy.buttons.data = (int32_t*) malloc(msg_joy.buttons.capacity * sizeof(int32_t));
 
