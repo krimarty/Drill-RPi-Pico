@@ -2,11 +2,10 @@
 # Micro-ROS on Raspberry Pi Pico for Rover Freya drill
 
 ## Introduction
-
-    '''This project demonstrates the integration of Micro-ROS on a Raspberry Pi Pico, serving as the central microcontroller 
-    in a drill system of our rover Freya. The Pico manages communication with subsystems responsible for controlling linear 
-    motors, the drilling motor, and storage system via I2C. It acts as a lightweight, efficient, and reliable control unit, enabling 
-    seamless coordination of these components.'''
+This project demonstrates the integration of Micro-ROS on a Raspberry Pi Pico, serving as the central microcontroller 
+in a drill system of our rover Freya. The Pico manages communication with subsystems responsible for controlling linear 
+motors, the drilling motor, and storage system via I2C. It acts as a lightweight, efficient, and reliable control unit, enabling 
+seamless coordination of these components.
 
 ## Features
 
