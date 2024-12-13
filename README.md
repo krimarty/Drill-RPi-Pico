@@ -8,26 +8,23 @@ motors, the drilling motor, and storage system via I2C. It acts as a lightweight
 seamless coordination of these components.
 
 ## Features
-
-    - Integration of Micro-ROS on Raspberry Pi Pico.
-    - USB or UART communication with Mars Rover.
-    - I2C communication with peripherals.
-    - Joy subscriber.
-    - Publishes weight of the sample.
+- Integration of Micro-ROS on Raspberry Pi Pico.
+- USB or UART communication with Mars Rover.
+- I2C communication with peripherals.
+- Joy subscriber.
+- Publishes weight of the sample.
 
 ## Hardware Requirements
-
-    - Drill motherboard with components
-    - Drill motors and actuators
-    - Power suppply 24V
+- Drill motherboard with components
+- Drill motors and actuators
+- Power suppply 24V
 
 ## Software Requirements
-
-    - Pico SDK C/C++
-    - ROS 2
-    - joy package from joystick_drivers repo
-    - Micro-ROS
-    - Micro-ROS agent (or using docker)
+- Pico SDK C/C++
+- ROS 2
+- joy package from joystick_drivers repo
+- Micro-ROS
+- Micro-ROS agent (or using docker)
 
 ## Installation
 

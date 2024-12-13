@@ -71,19 +71,19 @@ void joy_callback(sensor_msgs__msg__Joy* msgin)
     // Set the motor
     if (msgin->axes.data[5] < 1)    //left 
     { 
-        motor.torque =  (1 - msgin->axes.data[5]) / 2 * 200; 
+        motor.torque =  (1 - msgin->axes.data[5]) / 2 * 125; 
     }
     else    //right
     { 
-        motor.torque = - ((1 - msgin->axes.data[2]) / 2 * 200);
+        motor.torque = - ((1 - msgin->axes.data[2]) / 2 * 125);
     }
     motor_write(&motor);
 
     // Set the storage command
     uint8_t old_command = storage.command;
-    if (msgin->buttons.data[0] == 1) { storage.command = 31; }          //pos 1
-    else if (msgin->buttons.data[1] == 1) {storage.command = 32;}       //pos 2
-    else if (msgin->buttons.data[2] == 1) {storage.command = 33;}       //pos 3
+    if (msgin->buttons.data[1] == 1) { storage.command = 31; }          //pos 1
+    else if (msgin->buttons.data[2] == 1) {storage.command = 32;}       //pos 2
+    else if (msgin->buttons.data[0] == 1) {storage.command = 33;}       //pos 3
     else if (msgin->buttons.data[3] == 1) {storage.command = 30;}       //pos 0
     else if (msgin->buttons.data[4] == 1) {storage.command = 20;}       //get weight
     else if (msgin->buttons.data[5] == 1) {storage.command = 40;}       //hold pos
